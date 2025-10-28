@@ -20,9 +20,16 @@ import java.nio.file.Paths;
 // ===========================
 // Custom Input Class
 // ===========================
+/**
+ * Represents a single track input with 6 features (e.g., avgWire values).
+ */
 class TrackInput {
-    float[] features;   // 长度 = 6 (avgWire 等输入特征)
+    float[] features;   // Length = 6
 
+    /**
+     * Constructor
+     * @param features float array of input features (length 6)
+     */
     public TrackInput(float[] features) {
         this.features = features;
     }
@@ -31,19 +38,22 @@ class TrackInput {
 // ===========================
 // Main Inference Program
 // ===========================
+/**
+ * Main class for loading a TorchScript MLP model and performing single-sample inference.
+ */
 public class Main {
 
     public static void main(String[] args) {
 
         // -----------------------------
-        // 1. Translator: 输入 TrackInput → 输出 Float (轨迹概率)
+        // 1. Translator: TrackInput → Float (track probability)
         // -----------------------------
         Translator<TrackInput, Float> translator = new Translator<TrackInput, Float>() {
 
             @Override
             public NDList processInput(TranslatorContext ctx, TrackInput input) {
                 NDManager manager = ctx.getNDManager();
-                // shape: (1, 6)
+                // Convert features to shape (1, 6)
                 NDArray x = manager.create(input.features).reshape(1, input.features.length);
                 return new NDList(x);
             }
@@ -51,35 +61,34 @@ public class Main {
             @Override
             public Float processOutput(TranslatorContext ctx, NDList list) {
                 NDArray result = list.get(0);  // shape: (1,)
-                return result.toFloatArray()[0];  // 取出单个预测值
+                return result.toFloatArray()[0];  // Extract single prediction
             }
 
             @Override
             public Batchifier getBatchifier() {
-                return null;  // 单样本推理
+                return null;  // Single-sample inference, no batching
             }
         };
 
         // -----------------------------
-        // 2. 定义模型加载 Criteria
+        // 2. Define model loading criteria
         // -----------------------------
         Criteria<TrackInput, Float> criteria = Criteria.builder()
                 .setTypes(TrackInput.class, Float.class)
-                .optModelPath(Paths.get("nets/mlp_default.pt"))  // TorchScript 模型路径
+                .optModelPath(Paths.get("nets/mlp_default.pt"))  // TorchScript model path
                 .optEngine("PyTorch")
                 .optTranslator(translator)
                 .optProgress(new ProgressBar())
                 .build();
 
         // -----------------------------
-        // 3. 加载模型并执行推理
+        // 3. Load model and run inference
         // -----------------------------
         try (ZooModel<TrackInput, Float> model = criteria.loadModel();
              Predictor<TrackInput, Float> predictor = model.newPredictor()) {
 
-            // 示例输入 (6 个 float 特征)
-            float[] exampleFeatures = new float[]{44.6000f,43.3333f,41.0000f,38.8571f,35.1667f,33.4286f};
-
+            // Example input with 6 float features
+            float[] exampleFeatures = new float[]{44.6000f, 43.3333f, 41.0000f, 38.8571f, 35.1667f, 33.4286f};
             TrackInput input = new TrackInput(exampleFeatures);
 
             Float probability = predictor.predict(input);

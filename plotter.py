@@ -1,5 +1,4 @@
 import matplotlib
-
 matplotlib.use('Agg')
 from matplotlib import pyplot as plt
 import numpy as np
@@ -14,12 +13,25 @@ plt.rcParams.update({
     'lines.linewidth': 3
 })
 
+
 class Plotter:
+    """
+    Utility class for plotting training loss, predicted probabilities, TPR/TNR, and Precision/Recall/F1 metrics.
+    """
     def __init__(self, print_dir='', end_name=''):
+        """
+        :param print_dir: Directory to save plots
+        :param end_name: Optional suffix for plot filenames
+        """
         self.print_dir = print_dir
         self.end_name = end_name
 
     def plotTrainLoss(self, tracker):
+        """
+        Plot training and validation loss curves.
+
+        :param tracker: LossTracker object with train_losses and val_losses lists
+        """
         train_losses = tracker.train_losses
         val_losses = tracker.val_losses
 
@@ -37,9 +49,11 @@ class Plotter:
 
     def plotLabelProbs(self, preds, targets, bins=100):
         """
-        绘制正负样本预测概率分布
-        preds: (N,) 或 (N,1) tensor, sigmoid 概率
-        targets: (N,) 或 (N,1) tensor, 0/1
+        Plot predicted probability distributions for positive and negative samples.
+
+        :param preds: Tensor of predicted probabilities, shape (N,) or (N,1)
+        :param targets: Tensor of true labels (0 or 1), shape (N,) or (N,1)
+        :param bins: Number of bins for histogram
         """
         preds = preds.squeeze().cpu().numpy()
         targets = targets.squeeze().cpu().numpy()
@@ -56,7 +70,7 @@ class Plotter:
         plt.xlabel("Predicted probability")
         plt.ylabel("Count")
         plt.yscale('log')
-        plt.title(f"Probability distribution")
+        plt.title("Probability distribution")
         plt.legend()
         plt.tight_layout()
         outname = f"{self.print_dir}/probs_{self.end_name}.png"
@@ -65,7 +79,11 @@ class Plotter:
 
     def plotTPR_TNR_vs_Threshold(self, preds, targets, num_points=100):
         """
-        绘制 TPR 和 TNR 随阈值变化
+        Plot True Positive Rate (TPR) and True Negative Rate (TNR) versus threshold.
+
+        :param preds: Tensor of predicted probabilities, shape (N,) or (N,1)
+        :param targets: Tensor of true labels (0 or 1), shape (N,) or (N,1)
+        :param num_points: Number of threshold points to evaluate
         """
         preds = preds.squeeze().cpu().numpy()
         targets = targets.squeeze().cpu().numpy()
@@ -102,7 +120,13 @@ class Plotter:
 
     def plotPrecisionRecallF1_vs_Threshold(self, preds, targets, num_points=100):
         """
-        绘制 Precision、Recall、F1 随阈值变化，并返回最佳阈值
+        Plot Precision, Recall, and F1-score versus threshold and return the best threshold
+        based on F1-score.
+
+        :param preds: Tensor of predicted probabilities, shape (N,) or (N,1)
+        :param targets: Tensor of true labels (0 or 1), shape (N,) or (N,1)
+        :param num_points: Number of threshold points to evaluate
+        :return: Threshold value that maximizes F1-score
         """
         preds = preds.squeeze().cpu().numpy()
         targets = targets.squeeze().cpu().numpy()

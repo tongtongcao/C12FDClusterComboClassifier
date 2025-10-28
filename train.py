@@ -5,19 +5,34 @@ import pytorch_lightning as pl
 import pandas as pd
 import numpy as np
 import time
-
 import argparse
 import os
 
 from trainer import *
 from plotter import Plotter
 
+
 def parse_args():
+    """
+    Parse command-line arguments.
+
+    :return: Namespace containing all parsed arguments
+    """
     parser = argparse.ArgumentParser(description="MLP")
-    parser.add_argument("--device", type=str, choices=["cpu", "gpu", "auto"], default="auto",
-                        help="Choose device: cpu, gpu, or auto (default: auto)")
-    parser.add_argument("inputs", type=str, nargs="*", default=["avgWiresLabel.csv"],
-                        help="One or more input CSV files")
+    parser.add_argument(
+        "--device",
+        type=str,
+        choices=["cpu", "gpu", "auto"],
+        default="auto",
+        help="Choose device: cpu, gpu, or auto (default: auto)"
+    )
+    parser.add_argument(
+        "inputs",
+        type=str,
+        nargs="*",
+        default=["avgWiresLabel.csv"],
+        help="One or more input CSV files"
+    )
     parser.add_argument("--max_epochs", type=int, default=50,
                         help="Number of training epochs")
     parser.add_argument("--batch_size", type=int, default=256,
@@ -26,8 +41,10 @@ def parse_args():
                         help="Directory to save models and plots")
     parser.add_argument("--end_name", type=str, default="",
                         help="Optional suffix to append to output files (default: none)")
-    parser.add_argument("--hidden_dim", type=int, default=32)
-    parser.add_argument("--num_layers", type=int, default=2)
+    parser.add_argument("--hidden_dim", type=int, default=32,
+                        help="Number of neurons in hidden layers")
+    parser.add_argument("--num_layers", type=int, default=2,
+                        help="Number of hidden layers")
     parser.add_argument("--lr", type=float, default=1e-3,
                         help="Learning rate for optimizer")
     parser.add_argument("--no_train", action="store_true",
@@ -38,26 +55,43 @@ def parse_args():
 
 
 class ClusterDataset(Dataset):
+    """
+    Dataset for cluster-based CSV data.
+    """
     def __init__(self, csv_files):
         """
-        csv_files: CSV 文件路径列表，或者单个文件路径
+        Load and preprocess CSV files.
+
+        :param csv_files: Path to a CSV file or list of CSV file paths
         """
         if isinstance(csv_files, str):
             csv_files = [csv_files]
-        # 拼接所有文件数据
         dfs = [pd.read_csv(f, header=None) for f in csv_files]
         df = pd.concat(dfs, ignore_index=True)
 
         self.X = df.iloc[:, :6].values.astype(np.float32) / 112.0
-        self.y = df.iloc[:, -1].values.astype(np.float32)  # 最后一列 label
+        self.y = df.iloc[:, -1].values.astype(np.float32)  # last column as label
 
     def __len__(self):
+        """
+        :return: Number of samples in the dataset
+        """
         return len(self.y)
 
     def __getitem__(self, idx):
+        """
+        Get a single sample from the dataset.
+
+        :param idx: Index of the sample
+        :return: Tuple of (features, label) as tensors
+        """
         return torch.tensor(self.X[idx]), torch.tensor(self.y[idx])
 
+
 def main():
+    """
+    Main function to load data, train MLP, and run evaluation.
+    """
     args = parse_args()
 
     outDir = args.outdir
@@ -66,28 +100,25 @@ def main():
     end_name = args.end_name
     doTraining = not args.no_train
 
-    os.makedirs(args.outdir, exist_ok=True)
-
+    os.makedirs(outDir, exist_ok=True)
 
     print('\n\nLoading data...')
     startT_data = time.time()
 
-    # Read data
+    # Load dataset
     dataset = ClusterDataset(args.inputs)
-
     y = torch.tensor(dataset.y)
 
     num_pos = (y == 1).sum().item()
     num_neg = (y == 0).sum().item()
-    pos_weight = num_neg / num_pos  # 正样本加权系数
-
+    pos_weight = num_neg / num_pos  # positive sample weight
     print(f"num_pos={num_pos}, num_neg={num_neg}, pos_weight={pos_weight:.3f}")
 
+    # Split dataset
     train_size = int(0.8 * len(dataset))
     val_size = len(dataset) - train_size
     generator = torch.Generator().manual_seed(42)
     train_set, val_set = random_split(dataset, [train_size, val_size], generator=generator)
-
     print('\n\nTrain size:', train_size)
     print('Test size:', val_size)
 
@@ -95,8 +126,8 @@ def main():
     val_loader = DataLoader(val_set, batch_size=batchSize, shuffle=False)
 
     X_sample, y_sample = next(iter(train_loader))
-    print('X_sample:', X_sample.shape)  # torch.Size([batch_size, 6])
-    print('y_sample:', y_sample.shape)  # torch.Size([batch_size])
+    print('X_sample:', X_sample.shape)
+    print('y_sample:', y_sample.shape)
 
     endT_data = time.time()
     print(f'Loading data took {endT_data - startT_data:.2f}s \n\n')
@@ -104,6 +135,7 @@ def main():
     # Define plotter
     plotter = Plotter(print_dir=outDir, end_name=end_name)
 
+    # Initialize model
     model = ClusterComboMLP(
         hidden_dim=args.hidden_dim,
         num_layers=args.num_layers,
@@ -115,11 +147,9 @@ def main():
 
     if doTraining:
         # Device selection
-        # --------------------
         if args.device == "cpu":
             accelerator = "cpu"
             devices = 1
-
         elif args.device == "gpu":
             if torch.cuda.is_available():
                 accelerator = "gpu"
@@ -128,15 +158,13 @@ def main():
                 print("GPU requested but not available. Falling back to CPU.")
                 accelerator = "cpu"
                 devices = 1
-
         elif args.device == "auto":
             if torch.cuda.is_available():
                 accelerator = "gpu"
-                devices = "auto"  # use all visible GPUs
+                devices = "auto"
             else:
                 accelerator = "cpu"
                 devices = 1
-
         else:
             raise ValueError(f"Unknown device option: {args.device}")
 
@@ -152,7 +180,7 @@ def main():
             enable_checkpointing=False,
             check_val_every_n_epoch=1,
             num_sanity_val_steps=0,
-            logger=False,  # disables lightning_logs
+            logger=False,
             callbacks=[loss_tracker]
         )
 
@@ -160,27 +188,24 @@ def main():
         startT_train = time.time()
         trainer.fit(model, train_loader, val_loader)
         endT_train = time.time()
-
         print(f'Training took {(endT_train - startT_train) / 60:.2f} minutes \n\n')
 
         plotter.plotTrainLoss(loss_tracker)
 
-        # Save the model
+        # Save trained model
         model.to("cpu")
         torchscript_model = torch.jit.script(model)
         torchscript_model.save(f"{outDir}/mlp_{end_name}.pt")
 
-    # Load the model and run inference
+    # Load model for inference
     if doTraining:
         model = torch.jit.load(f"{outDir}/mlp_{end_name}.pt")
     else:
         model = torch.jit.load(f"nets/mlp_default.pt")
     model.eval()
 
-
-
+    # Run inference
     startT_test = time.time()
-
     all_preds = []
     all_targets = []
     with torch.no_grad():
@@ -196,17 +221,15 @@ def main():
     all_targets = torch.cat(all_targets)
     print(f"Predictions shape: {all_preds.shape}, Targets shape: {all_targets.shape}")
 
+    # Plot evaluation results
     plotter.plotLabelProbs(all_preds, all_targets)
-
     plotter.plotTPR_TNR_vs_Threshold(all_preds, all_targets)
-
     plotter.plotPrecisionRecallF1_vs_Threshold(all_preds, all_targets)
 
-    # -------------------------
-    # Print sample cluster probabilities
+    # Print first 10 sample predictions
     for i in range(min(10, all_preds.size(0))):
         print(f"Cluster {i}: Prob={all_preds[i]:.3f}, Target={all_targets[i].item()}")
 
+
 if __name__ == "__main__":
     main()
-
