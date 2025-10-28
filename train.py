@@ -26,7 +26,7 @@ def parse_args():
                         help="Directory to save models and plots")
     parser.add_argument("--end_name", type=str, default="",
                         help="Optional suffix to append to output files (default: none)")
-    parser.add_argument("--hidden_channels", type=int, default=64)
+    parser.add_argument("--hidden_dim", type=int, default=32)
     parser.add_argument("--num_layers", type=int, default=2)
     parser.add_argument("--lr", type=float, default=1e-3,
                         help="Learning rate for optimizer")
@@ -105,7 +105,7 @@ def main():
     plotter = Plotter(print_dir=outDir, end_name=end_name)
 
     model = ClusterComboMLP(
-        hidden_dim=args.hidden_channels,
+        hidden_dim=args.hidden_dim,
         num_layers=args.num_layers,
         lr=args.lr,
         pos_weight=pos_weight
