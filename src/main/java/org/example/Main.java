@@ -24,14 +24,21 @@ import java.nio.file.Paths;
  * Represents a single track input with 6 features (e.g., avgWire values).
  */
 class TrackInput {
-    float[] features;   // Length = 6
+    float[] features;
 
-    /**
-     * Constructor
-     * @param features float array of input features (length 6)
-     */
     public TrackInput(float[] features) {
-        this.features = features;
+        if (features.length != 6) {
+            throw new IllegalArgumentException("Expected 6 features");
+        }
+        this.features = normalize(features);
+    }
+
+    private float[] normalize(float[] feats) {
+        float[] norm = new float[6];
+        for (int i = 0; i < 6; i++) {
+            norm[i] = feats[i] / 112.0f;
+        }
+        return norm;
     }
 }
 
@@ -88,7 +95,7 @@ public class Main {
              Predictor<TrackInput, Float> predictor = model.newPredictor()) {
 
             // Example input with 6 float features
-            float[] exampleFeatures = new float[]{44.6000f, 43.3333f, 41.0000f, 38.8571f, 35.1667f, 33.4286f};
+            float[] exampleFeatures = new float[]{52.0000f,55.1667f,50.5000f,53.5000f,52.5000f,55.1429f};
             TrackInput input = new TrackInput(exampleFeatures);
 
             Float probability = predictor.predict(input);
