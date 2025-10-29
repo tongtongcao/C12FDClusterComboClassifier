@@ -1,5 +1,5 @@
 The package is to train classifier to predict if a 6-cluster combo belongs to a track candidate by Multi-Layer Perceptron (MLP).\
-The AI model is designed by pytorch and pytorch-lightning.\
+The AI model is designed by pytorch and pytorch-lightning.
 
 It is recommended to run the package in python virtual enviroment.
   - To install python virtual enviromen for cup-only, source setup_pytorch_lightning_venv.csh
@@ -14,7 +14,7 @@ Finally, run the package,
 
 Arguments:
   - positional arguments:
-    - inputs      &nbsp;&nbsp;&nbsp;          One or more input CSV files (default: avgWiresLabel.csv)
+    - inputs      &nbsp;&nbsp;&nbsp;          One or more CSV files (default: avgWiresLabel.csv)
 
   - options:
     - -h, --help     &nbsp;&nbsp;&nbsp;       show this help message and exit
