@@ -8,7 +8,7 @@ class ClusterComboMLP(pl.LightningModule):
     def __init__(
         self,
         input_dim=6,
-        hidden_dim=32,
+        hidden_dim=16,
         num_layers=2,
         lr=1e-3,
         pos_weight=None,
