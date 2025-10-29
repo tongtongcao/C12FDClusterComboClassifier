@@ -1,3 +1,4 @@
+import os
 import matplotlib
 matplotlib.use('Agg')
 from matplotlib import pyplot as plt
@@ -61,11 +62,18 @@ class Plotter:
         probs_1 = preds[targets == 1]
         probs_0 = preds[targets == 0]
 
+        # Use shared bin edges to align histograms
+        bin_edges = np.linspace(0.0, 1.0, bins + 1)
+
         plt.figure(figsize=(10, 6))
+
+        # Plot positive samples
         if len(probs_1) > 0:
-            plt.hist(probs_1, bins=bins, alpha=0.6, color='green', label='Label=1')
+            plt.hist(probs_1, bins=bin_edges, alpha=0.6, color='green', label=f'Label=1 ({len(probs_1)})')
+
+        # Plot negative samples
         if len(probs_0) > 0:
-            plt.hist(probs_0, bins=bins, alpha=0.6, color='red', label='Label=0')
+            plt.hist(probs_0, bins=bin_edges, alpha=0.6, color='red', label=f'Label=0 ({len(probs_0)})')
 
         plt.xlabel("Predicted probability")
         plt.ylabel("Count")
@@ -73,6 +81,9 @@ class Plotter:
         plt.title("Probability distribution")
         plt.legend()
         plt.tight_layout()
+
+        # Ensure output directory exists
+        os.makedirs(self.print_dir, exist_ok=True)
         outname = f"{self.print_dir}/probs_{self.end_name}.png"
         plt.savefig(outname, dpi=300)
         plt.close()
