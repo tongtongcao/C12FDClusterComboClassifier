@@ -37,7 +37,7 @@ def parse_args():
                         help="Number of training epochs")
     parser.add_argument("--batch_size", type=int, default=256,
                         help="Batch size for DataLoader")
-    parser.add_argument("--outdir", type=str, default="outputs",
+    parser.add_argument("--outdir", type=str, default="outputs/local",
                         help="Directory to save models and plots")
     parser.add_argument("--end_name", type=str, default="",
                         help="Optional suffix to append to output files (default: none)")
